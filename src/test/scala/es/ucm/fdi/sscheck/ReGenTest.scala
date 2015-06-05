@@ -1,10 +1,10 @@
-package es.ucm.fdi.scalacheck
+package es.ucm.fdi.sscheck
 
 import org.scalacheck.{Properties, Gen}
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop.{forAll, BooleanOperators, exists, atLeastOne}
 
-object ReGenTest extends Properties("ReGen regex generators test") {
+object ReGenTest extends Properties("ReGen regex generators properties") {
  
   property("epsilon generates empty sequences") = 
     forAll (ReGen.epsilon) { (xs : Seq[Int]) =>

@@ -1,6 +1,8 @@
-package es.ucm.fdi.scalacheck
+package es.ucm.fdi.sscheck
 
 import org.scalacheck.Gen
+
+import es.ucm.fdi.sscheck.UtilsGen.containerOfNtoM;
 import util.Buildables.buildableSeq
 import UtilsGen.{containerOfNtoM}
 /**
@@ -32,8 +34,8 @@ object ReGen {
   }
   
   def star[A](g : Gen[Seq[A]]) : Gen[Seq[A]] = {
-		for {
-	    xs <- Gen.containerOf(g)
-	  } yield xs flatten
+    for {
+	  xs <- Gen.containerOf(g)
+	} yield xs flatten
   }    
 }

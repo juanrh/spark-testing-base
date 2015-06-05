@@ -1,4 +1,4 @@
-package es.ucm.fdi.scalacheck.util
+package es.ucm.fdi.sscheck.util
 
 import org.scalacheck.util.Buildable
 
@@ -13,7 +13,7 @@ object Buildables {
     	  this
       }
       def clear = xs = List()
-      def result = xs reverse // note it is important to maintain the generation order
+      def result = xs reverse // note it is important to respect the generation order
     }
   }   
 }
