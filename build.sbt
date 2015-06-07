@@ -18,6 +18,10 @@ sparkVersion := "1.3.0"
 
 sparkComponents ++= Seq("core", "streaming")
 
+// if parallel test execution is not disabled and several test suites using
+// SparkContext (even through SharedSparkContext) are running then tests fail randomly
+parallelExecution := false
+
 // additional libraries
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1"
 
