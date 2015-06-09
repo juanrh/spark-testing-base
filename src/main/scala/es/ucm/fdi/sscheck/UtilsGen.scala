@@ -2,7 +2,7 @@ package es.ucm.fdi.sscheck
 
 import org.scalacheck.Gen
 import org.scalacheck.util.Buildable
-import util.Buildables.buildableSeq
+import Buildables.buildableSeq
 
 object UtilsGen {
   /** Like containerOfN but with variable number of elements
@@ -14,6 +14,16 @@ object UtilsGen {
 	  for {
         i <- Gen.choose(n, m)
         xs <- Gen.containerOfN[C, T](i, g)
+      } yield xs
+  }
+  
+  def buildableOfNtoM[C, T]
+    (n : Int, m : Int, g : Gen[T])
+	(implicit evb: Buildable[T, C], evt: (C) => Traversable[T])
+	: Gen[C] = {
+	  for {
+        i <- Gen.choose(n, m)
+        xs <- Gen.buildableOfN[C, T](i, g)
       } yield xs
   }
   

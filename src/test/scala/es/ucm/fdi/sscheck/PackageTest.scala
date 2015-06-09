@@ -3,7 +3,8 @@ package es.ucm.fdi.sscheck
 import org.scalacheck.{Properties, Gen}
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop.{forAll, exists, AnyOperators, collect}
-import util.Buildables.buildableSeq
+// import Buildables.buildableSeq
+import Buildables._
 import org.scalatest._
 import org.scalatest.Matchers._
 import org.scalatest.prop.PropertyChecks._
@@ -24,10 +25,10 @@ object PackageTest extends Properties("Properties for package object for es.ucm.
             "dstreamSize1" |: Gen.choose(0, dstreamMaxSize),
             "dstreamSize2" |: Gen.choose(0, dstreamMaxSize)) 
             { (batchSize1 : Int, batchSize2 : Int, dstreamSize1: Int, dstreamSize2: Int) => 
-      def batchGen1 : Gen[Batch[Int]] = Gen.containerOfN(batchSize1, arbitrary[Int])
-      def dstreamGen1 : Gen[DStream[Int]] = Gen.containerOfN[Seq, Seq[Int]](dstreamSize1, batchGen1)
-      def batchGen2 : Gen[Batch[Int]] = Gen.containerOfN(batchSize2, arbitrary[Int])
-      def dstreamGen2 : Gen[DStream[Int]] = Gen.containerOfN[Seq, Seq[Int]](dstreamSize2, batchGen2)
+      def batchGen1 : Gen[Batch[Int]] = BatchGen.ofN(batchSize1, arbitrary[Int])
+      def dstreamGen1 : Gen[DStream[Int]] = DStreamGen.ofN(dstreamSize1, batchGen1)
+      def batchGen2 : Gen[Batch[Int]] = BatchGen.ofN(batchSize2, arbitrary[Int])
+      def dstreamGen2 : Gen[DStream[Int]] = DStreamGen.ofN(dstreamSize2, batchGen2)
       val (gs1, gs2) = (dstreamGen1, dstreamGen2) 
       forAll ("dsUnion" |: dstreamUnion(gs1, gs2)) { (dsUnion : DStream[Int]) =>
         collect (s"batchSize1=${batchSize1}, batchSize2=${batchSize2}, dstreamSize1=${dstreamSize1}, dstreamSize2=${dstreamSize2}") {
@@ -57,8 +58,8 @@ object PackageTest extends Properties("Properties for package object for es.ucm.
 (weak, existential)""") = {
     // using small lists as we'll use Prop.exists
     val (batchMaxSize, dstreamMaxSize) = (2, 1)
-    def batchGen : Gen[Batch[Int]] = UtilsGen.containerOfNtoM(0, batchMaxSize, arbitrary[Int])
-    def dstreamGen : Gen[DStream[Int]] = UtilsGen.containerOfNtoM[Seq, Seq[Int]](0, dstreamMaxSize, batchGen) 
+    def batchGen : Gen[Batch[Int]] = BatchGen.ofNtoM(0, batchMaxSize, arbitrary[Int]) 
+    def dstreamGen : Gen[DStream[Int]] = DStreamGen.ofNtoM(0, dstreamMaxSize, batchGen)
     val (gs1, gs2) = (dstreamGen, dstreamGen)
     
     forAll ("dsUnion" |: dstreamUnion(gs1, gs2)) { (dsUnion : DStream[Int]) =>

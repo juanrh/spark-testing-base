@@ -3,7 +3,7 @@ package es.ucm.fdi.sscheck
 import org.scalacheck.{Properties, Gen}
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop.{forAll, exists, BooleanOperators}
-import util.Buildables.buildableSeq
+import Buildables.buildableSeq
 
 object UtilsGenTest extends Properties("UtilsGenTest test") {  
   property("""containerOfNtoM is able to generate sequences of 

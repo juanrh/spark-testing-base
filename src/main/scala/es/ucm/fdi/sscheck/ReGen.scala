@@ -3,7 +3,7 @@ package es.ucm.fdi.sscheck
 import org.scalacheck.Gen
 
 import es.ucm.fdi.sscheck.UtilsGen.containerOfNtoM;
-import util.Buildables.buildableSeq
+import Buildables.buildableSeq
 import UtilsGen.{containerOfNtoM}
 /**
   Generators for simple regexp, as generators of Seq[A]
