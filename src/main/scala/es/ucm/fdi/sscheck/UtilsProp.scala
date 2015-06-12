@@ -11,7 +11,7 @@ import org.scalacheck.util.Pretty
 object UtilsProp {
   def safeProp[P <% Prop](p : => P) : Prop = {
     Try(p) match {
-      case Success(_) => Prop.proved
+      case Success(pVal) => pVal
       case Failure(t) => t match {
         case _: TestFailedException => Prop.falsified
         case _ => Prop.exception(t) 
