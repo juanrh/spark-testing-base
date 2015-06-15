@@ -9,6 +9,7 @@ import org.scalatest._
 import org.scalatest.Matchers._
 import org.scalatest.prop.PropertyChecks._
 import org.scalatest.Inspectors.{forAll => testForAll}
+import DStreamGen._
 
 /*
  * NOTE the use of the import alias org.scalatest.Inspectors.{forAll => testForAll} to
@@ -16,7 +17,7 @@ import org.scalatest.Inspectors.{forAll => testForAll}
  * forAll adapter for ScalaCheck 
  * */
 
-object PackageTest extends Properties("Properties for package object for es.ucm.fdi.sscheck") {  
+object DStreamGenTest extends Properties("Properties for package object for es.ucm.fdi.sscheck") {  
   property("""dstreamUnion() should respect expected batch sizes""") = {
     // using small lists as we'll use Prop.exists
     val (batchMaxSize, dstreamMaxSize) = (100, 20)
@@ -30,7 +31,7 @@ object PackageTest extends Properties("Properties for package object for es.ucm.
       def batchGen2 : Gen[Batch[Int]] = BatchGen.ofN(batchSize2, arbitrary[Int])
       def dstreamGen2 : Gen[DStream[Int]] = DStreamGen.ofN(dstreamSize2, batchGen2)
       val (gs1, gs2) = (dstreamGen1, dstreamGen2) 
-      forAll ("dsUnion" |: dstreamUnion(gs1, gs2)) { (dsUnion : DStream[Int]) =>
+      forAll ("dsUnion" |: gs1  + gs2) { (dsUnion : DStream[Int]) =>
         collect (s"batchSize1=${batchSize1}, batchSize2=${batchSize2}, dstreamSize1=${dstreamSize1}, dstreamSize2=${dstreamSize2}") {
           dsUnion should have length (math.max(dstreamSize1, dstreamSize2))
           // if no batch is generated then the effective batch size is 0
