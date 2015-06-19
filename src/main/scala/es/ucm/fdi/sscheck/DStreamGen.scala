@@ -3,7 +3,9 @@ package es.ucm.fdi.sscheck
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
-import BatchGen.now
+import org.scalacheck.Shrink
+import org.scalacheck.Shrink.shrink
+import BatchGen.now  
 
 /**
  * All the temporal generators defined in this object are sized generators, but the size parameters
@@ -40,6 +42,13 @@ object DStreamGen {
    * */
   implicit def arbDStream[A](implicit arbBatch : Arbitrary[Batch[A]]) : Arbitrary[DStream[A]] = 
     Arbitrary(DStreamGen.of(arbitrary[Batch[A]]))
+   
+  /** Shrink function for DStream 
+   * */
+  implicit def shrinkDStream[A] : Shrink[DStream[A]] = Shrink(dstream => 
+    // unwrap the underlying Seq, shrink the Seq, and rewrap
+    shrink(dstream.toSeq).map(DStream(_:_*))
+  )  
   
   /** @returns a generator of DStream that generates its batches from bg
    * */
@@ -76,36 +85,75 @@ object DStreamGen {
    *  from dsg
    * */
   def next[A](dsg : Gen[DStream[A]]) : Gen[DStream[A]] = {
-    now(Batch.empty : Batch[A]) ++ dsg 
+    // now(Batch.empty : Batch[A]) ++ dsg
+    laterN(1, dsg)
+  }
+  
+  /** @return a dstream generator that has n empty batches followed by the batches
+   *  from dsg
+   * */
+  def laterN[A](n : Int, dsg : Gen[DStream[A]]) : Gen[DStream[A]] = {
+    dsg.map(Seq.fill(n)(Batch.empty : Batch[A]) ++ _)
   }
   
   /**
-   * Example:
+   * Example: 
    * 
-  Gen.resize(10,
-  	until(
-  		DStreamGen.ofN(1, BatchGen.ofN(2, Gen.choose(0, 10))),
-  		DStreamGen.ofN(1, BatchGen.ofN(2, Gen.choose(10, 20))))
-  	).sample   //> res42: Option[es.ucm.fdi.sscheck.DStream[Int]] = Some(DStream(Batch(5, 9), 
-               //| Batch(0, 0), Batch(8, 3), Batch(6, 10), Batch(6, 1), Batch(1, 3), Batch(13,
-               //|  17))) 
+   * Gen.resize(4, {
+   * val g1 : Gen[DStream[Int]] = DStream(Batch(0), Batch(1))
+   * g1 until DStream(Batch(2), Batch(3))
+   *  }
+   * ).sample    //> res13: Option[es.ucm.fdi.sscheck.DStream[Int]] = Some(DStream(Batch(0), Bat
+   *             //| ch(1, 0), Batch(1, 2), Batch(3)))
+   * 
+   * Note: the following implementation is wrong, because in the second batch neither
+   * DStream(Batch(0), Batch(1)) happens, because 1 doesn't belong to that batch, nor
+   * DStream(Batch(2)) happens, because 2 doesn't belong to that batch
+   *  
+   * Gen.resize(4,
+   * 	DStreamGen.until(
+   *	  DStream(Batch(0), Batch(1)),
+   * 	  DStream(Batch(2))
+   * 	)
+   * ).sample      //> res11: Option[es.ucm.fdi.sscheck.DStream[Int]] = Some(DStream(Batch(0), Bat
+   *               //| ch(1), Batch(0), Batch(1), Batch(0), Batch(1), Batch(2)))
    * 
    * */
-  def until[A](dsg1 : Gen[DStream[A]], dsg2 : Gen[DStream[A]]) : Gen[DStream[A]] = 
+  def until[A](dsg1 : Gen[DStream[A]], dsg2 : Gen[DStream[A]]) : Gen[DStream[A]] =
+    /*
+    This implementation doesn't grant a strong until for big streams, because
+    we are not granted that dsg2 will be eventually reached
     Gen.sized { size =>
-      val prefixGen : Gen[DStream[A]] = 
-        UtilsGen. containerOfNtoM[List, DStream[A]](0, size -1, dsg1)
-                . map(_.flatten) 
-      prefixGen ++ dsg2
+      if (size <= 1) 
+        dsg2
+      else
+        for {
+          nowD <- dsg1
+          laterDs <- next(Gen.resize(size - 1, until(dsg1, dsg2)))
+        } yield nowD #+ laterDs
+    } 
+    On the other hand the implementation below passes the tests
+    * */   
+    Gen.sized { size => 
+       for {
+         // this works because always in fact generates a finite prefix of the real always
+         prefix <- Gen.resize(size - 1, always(dsg1))
+         dsg2Proof <- dsg2
+       } yield {
+         // note +1 is used so dsg2 only happens after dsg1
+         val dsg2DStream  = Seq.fill(prefix.length - dsg2Proof.length + 1)(Batch.empty : Batch[A]) ++ dsg2Proof
+         prefix #+ dsg2DStream 
+       }
     }
-  
+    
   def eventually[A](bg : Gen[DStream[A]]) : Gen[DStream[A]] =
     Gen.sized { size =>
       DStreamGen.ofNtoM(0, size -1, Batch.empty : Batch[A]) ++ bg 
     }
   
   /**
-   * Example: 
+   * Example: an always of an until must ensure a new until instance is generated at
+   * each batch / moment 
    * 
    val alwaysS2 =
     always(
@@ -130,11 +178,8 @@ object DStreamGen {
          */
         for {
           nowDs <- dsg
-          // laterDs <- Gen.resize(size - 1, alwaysS(dsg))
-          // FIXME re-think and write test
-          // laterDs <- Gen.resize(size - 1, nextS(alwaysS(dsg)))
           laterDs <- next(Gen.resize(size - 1, always(dsg)))
-         } yield nowDs #+ laterDs
+        } yield nowDs #+ laterDs
     }
   
   /** 
@@ -142,15 +187,16 @@ object DStreamGen {
    *  happens forever, or it happens until bg1 happens, including the
    *  moment when bg1 happens  
    * */
-  def release[A](dsg1 : Gen[DStream[A]], dsg2 : Gen[DStream[A]]) : Gen[DStream[A]] =
-    Gen.sized { size =>
-      for {
-        prefix <- UtilsGen. containerOfNtoM[List, DStream[A]](0, size -2, dsg2)
-                . map(_.flatten)
-        isReleased <- arbitrary[Boolean]
-        tail <- if (isReleased) (dsg1 + dsg2) else dsg2       
-      } yield prefix ++ tail
-    }
+  def release[A](dsg1 : Gen[DStream[A]], dsg2 : Gen[DStream[A]]) : Gen[DStream[A]] = {
+    /* The definition of release applied to finite prefixes is the same as "dsg2 happens
+     * until either dsg2 happens once more (this is finite), or dsg1 and dsg2 happen" 
+     * */
+    val tailGen = for {
+      isReleased <- arbitrary[Boolean]
+      dsg1Proof <- if (isReleased) (dsg1 + dsg2) else dsg2
+    } yield dsg1Proof
+    until(dsg2, tailGen)
+  }
 } 
 
 class DStreamGen[A](self : Gen[DStream[A]]) {
@@ -166,4 +212,11 @@ class DStreamGen[A](self : Gen[DStream[A]]) {
   * are implicitly treated as they where infinitely extended with empty batches  
   */
   def +(other : Gen[DStream[A]]) : Gen[DStream[A]] = dstreamUnion(self, other)
+  
+  def next : Gen[DStream[A]] = DStreamGen.next(self)
+  def laterN(n : Int) : Gen[DStream[A]] = DStreamGen.laterN(n, self)
+  def eventually : Gen[DStream[A]] = DStreamGen.eventually(self)
+  def until(other : Gen[DStream[A]]) : Gen[DStream[A]] = DStreamGen.until(self, other)
+  def always : Gen[DStream[A]] = DStreamGen.always(self)
+  def release(other : Gen[DStream[A]]) : Gen[DStream[A]] = DStreamGen.release(self, other)
 }
