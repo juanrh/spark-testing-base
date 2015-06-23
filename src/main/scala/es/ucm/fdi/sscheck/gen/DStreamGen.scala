@@ -1,4 +1,4 @@
-package es.ucm.fdi.sscheck
+package es.ucm.fdi.sscheck.gen
 
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary

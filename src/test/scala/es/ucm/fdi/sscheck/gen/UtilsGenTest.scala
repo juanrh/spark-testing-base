@@ -1,4 +1,4 @@
-package es.ucm.fdi.sscheck
+package es.ucm.fdi.sscheck.gen
 
 import org.scalacheck.{Properties, Gen}
 import org.scalacheck.Arbitrary.arbitrary

@@ -1,4 +1,4 @@
-package es.ucm.fdi.sscheck
+package es.ucm.fdi.sscheck.prop
 
 import org.scalacheck.{Properties, Gen}
 import org.scalacheck.Prop.{forAll, exists, AnyOperators}

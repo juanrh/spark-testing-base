@@ -1,8 +1,8 @@
-package es.ucm.fdi.sscheck
+package es.ucm.fdi.sscheck.gen
 
 import org.scalacheck.Gen
 
-import es.ucm.fdi.sscheck.UtilsGen.containerOfNtoM;
+import es.ucm.fdi.sscheck.gen.UtilsGen.containerOfNtoM;
 import Buildables.buildableSeq
 import UtilsGen.{containerOfNtoM}
 /**
